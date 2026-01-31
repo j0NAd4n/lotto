@@ -1,54 +1,93 @@
 import streamlit as st
 import random
 
-# --- 1. 기본 설정 ---
-st.set_page_config(page_title="로또 패턴 반전기", page_icon="🎱", layout="centered")
+# --- 1. 기본 설정 (화면 꽉 채우기) ---
+st.set_page_config(page_title="로또 패턴 반전기", page_icon="🎱", layout="wide")
 
-# --- 2. CSS (여기가 핵심입니다) ---
+# --- 2. CSS (접음/펼침 자동 감지) ---
 st.markdown("""
 <style>
-    /* [전략]
-       "탭(Tab) 패널" 안에 있는 "가로 블록"만 타겟팅합니다.
-       하단의 실행 버튼은 탭 밖에 있으므로 영향을 받지 않습니다.
+    /* [공통 설정] 
+       화면 크기와 상관없이 로또 번호판은 무조건 7칸 그리드 
     */
     div[data-baseweb="tab-panel"] [data-testid="stHorizontalBlock"] {
         display: grid !important;
-        grid-template-columns: repeat(7, 1fr) !important; /* 무조건 7등분 */
-        gap: 2px !important;
-        padding-bottom: 5px !important;
+        grid-template-columns: repeat(7, 1fr) !important; /* 가로 7개 등분 */
+        width: 100% !important;
+        padding: 5px 0 !important;
     }
 
-    /* 탭 안에 있는 컬럼들의 너비 제한 해제 */
+    /* 컬럼(칸) 설정: 내용물이 넘치지 않게 */
     div[data-baseweb="tab-panel"] [data-testid="column"] {
         width: auto !important;
-        min-width: 0px !important; /* 이게 0이어야 좁은 화면에 구겨져 들어감 */
+        min-width: 0 !important;
         flex: unset !important;
+        padding: 2px !important; /* 버튼 간격 조절 */
     }
 
-    /* 탭 안에 있는 버튼 스타일링 (동그라미) */
+    /* [버튼 디자인 핵심] 
+       1. 동그라미 유지 (aspect-ratio: 1/1)
+       2. 글자 세로 깨짐 방지 (white-space: nowrap)
+    */
     div[data-baseweb="tab-panel"] button {
         width: 100% !important;
-        aspect-ratio: 1 / 1 !important; /* 정사각형 비율 유지 */
+        aspect-ratio: 1 / 1 !important; /* 무조건 정사각형 비율 -> 동그라미 */
         border-radius: 50% !important;
-        padding: 0px !important;
-        margin: 0px !important;
-        
-        /* 폰트 크기: 화면 폭에 따라 자동 조절 (vmin 사용) */
-        font-size: 3.5vmin !important; 
+        padding: 0 !important;
+        margin: 0 !important;
         line-height: 1 !important;
+        white-space: nowrap !important; /* 글자가 세로로 떨어지는 것 방지 (중요!) */
+        
+        /* 버튼 안의 Flex 정렬 */
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
-    
-    /* 전체 여백 줄이기 (폴드4 커버화면 공간 확보) */
-    .block-container {
-        padding-top: 2rem !important;
-        padding-left: 0.5rem !important;
-        padding-right: 0.5rem !important;
+
+    /* ============================================================
+       [반응형 처리] 화면 너비에 따라 글자 크기와 간격을 다르게!
+       ============================================================ */
+
+    /* 📱 1. 접었을 때 (화면 폭 600px 이하) */
+    @media (max-width: 600px) {
+        div[data-baseweb="tab-panel"] [data-testid="stHorizontalBlock"] {
+            gap: 1px !important; /* 간격 촘촘하게 */
+        }
+        div[data-baseweb="tab-panel"] button {
+            font-size: 12px !important; /* 글자 작게 */
+        }
+        /* 앱 여백 최소화 */
+        .block-container {
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
     }
-    
-    /* 탭 메뉴 글씨 작게 */
-    .stTabs button {
-        font-size: 0.8rem !important;
-        padding: 0.5rem !important;
+
+    /* 💻 2. 펼쳤을 때 (화면 폭 601px 이상) */
+    @media (min-width: 601px) {
+        div[data-baseweb="tab-panel"] [data-testid="stHorizontalBlock"] {
+            gap: 8px !important; /* 간격 여유 있게 */
+        }
+        div[data-baseweb="tab-panel"] button {
+            font-size: 18px !important; /* 글자 시원하게 */
+            max-width: 60px !important;  /* 버튼이 너무 커지는 것 방지 (오이 현상 해결) */
+            margin: 0 auto !important;   /* 중앙 정렬 */
+        }
+        /* 펼쳤을 땐 버튼이 너무 커지지 않게 컬럼 너비 제한 */
+        div[data-baseweb="tab-panel"] [data-testid="column"] {
+             display: flex;
+             justify-content: center;
+        }
+    }
+
+    /* 탭 메뉴 스타일 */
+    .stTabs [data-baseweb="tab-list"] { 
+        gap: 0px; 
+        justify-content: space-evenly; /* 균등 배치 */
+    }
+    .stTabs [data-baseweb="tab"] {
+        flex-grow: 1;
+        text-align: center;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -66,12 +105,11 @@ def toggle_number(game_idx, number):
             st.session_state.my_games[game_idx].add(number)
 
 def render_lotto_paper(game_idx):
-    # 번호판 생성
     numbers = list(range(1, 46))
     rows = [numbers[i:i+7] for i in range(0, len(numbers), 7)]
     
     for row_nums in rows:
-        cols = st.columns(7) # 여기서 만들어진 컬럼들이 위 CSS의 영향을 받음
+        cols = st.columns(7)
         for idx, number in enumerate(row_nums):
             is_selected = number in st.session_state.my_games[game_idx]
             btn_type = "primary" if is_selected else "secondary"
@@ -88,7 +126,6 @@ def render_lotto_paper(game_idx):
 # --- 5. 메인 화면 ---
 st.title("🎱 로또 패턴")
 
-# 탭 구성 (이 안의 내용물만 CSS Grid가 적용됨)
 tabs = st.tabs(["A", "B", "C", "D", "E"])
 
 for i, tab in enumerate(tabs):
@@ -97,7 +134,7 @@ for i, tab in enumerate(tabs):
 
 st.divider()
 
-# --- 6. 하단 버튼 (탭 밖이므로 정상적인 컬럼 작동) ---
+# --- 6. 하단 버튼 ---
 c1, c2 = st.columns([3, 1])
 
 with c1:
