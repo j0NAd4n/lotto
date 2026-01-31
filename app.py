@@ -4,49 +4,51 @@ import random
 # --- 1. 기본 설정 ---
 st.set_page_config(page_title="로또 패턴 반전기", page_icon="🎱", layout="centered")
 
-# --- 2. CSS (이 부분이 핵심입니다) ---
+# --- 2. CSS (여기가 핵심입니다) ---
 st.markdown("""
 <style>
-    /* [문제 해결의 핵심]
-       복잡한 조건문(:has)을 다 지우고, 
-       화면이 좁을 때(max-width: 768px) 무조건 가로로 정렬하라고 강제합니다.
+    /* [전략]
+       "탭(Tab) 패널" 안에 있는 "가로 블록"만 타겟팅합니다.
+       하단의 실행 버튼은 탭 밖에 있으므로 영향을 받지 않습니다.
     */
-    @media (max-width: 768px) {
-        /* 1. 모든 가로 배치 블록을 강제로 '가로(row)'로 고정 */
-        div[data-testid="stHorizontalBlock"] {
-            flex-direction: row !important;
-            flex-wrap: nowrap !important;
-        }
+    div[data-baseweb="tab-panel"] [data-testid="stHorizontalBlock"] {
+        display: grid !important;
+        grid-template-columns: repeat(7, 1fr) !important; /* 무조건 7등분 */
+        gap: 2px !important;
+        padding-bottom: 5px !important;
+    }
 
-        /* 2. 모든 컬럼(칸)의 최소 너비 제한을 0으로 만듦 (그래야 7개가 들어감) */
-        div[data-testid="column"] {
-            flex: 1 1 auto !important;
-            width: auto !important;
-            min-width: 0px !important;
-            padding: 0px 1px !important; /* 좌우 간격 1px */
-        }
+    /* 탭 안에 있는 컬럼들의 너비 제한 해제 */
+    div[data-baseweb="tab-panel"] [data-testid="column"] {
+        width: auto !important;
+        min-width: 0px !important; /* 이게 0이어야 좁은 화면에 구겨져 들어감 */
+        flex: unset !important;
+    }
 
-        /* 3. 버튼 크기 강제 조정 */
-        button[kind="secondary"], button[kind="primary"] {
-            padding: 0px !important;
-            margin: 0px !important;
-            height: auto !important;
-            aspect-ratio: 1/1 !important; /* 정사각형 유지 */
-            font-size: 10px !important;   /* 글자 크기 줄임 */
-            line-height: 1 !important;
-        }
+    /* 탭 안에 있는 버튼 스타일링 (동그라미) */
+    div[data-baseweb="tab-panel"] button {
+        width: 100% !important;
+        aspect-ratio: 1 / 1 !important; /* 정사각형 비율 유지 */
+        border-radius: 50% !important;
+        padding: 0px !important;
+        margin: 0px !important;
         
-        /* 4. 앱 좌우 여백 삭제 (공간 확보) */
-        .block-container {
-            padding-left: 0.5rem !important;
-            padding-right: 0.5rem !important;
-        }
+        /* 폰트 크기: 화면 폭에 따라 자동 조절 (vmin 사용) */
+        font-size: 3.5vmin !important; 
+        line-height: 1 !important;
     }
     
-    /* PC/큰 화면에서도 버튼 동그랗게 */
-    div[data-testid="column"] button {
-        border-radius: 50% !important;
-        width: 100% !important;
+    /* 전체 여백 줄이기 (폴드4 커버화면 공간 확보) */
+    .block-container {
+        padding-top: 2rem !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+    
+    /* 탭 메뉴 글씨 작게 */
+    .stTabs button {
+        font-size: 0.8rem !important;
+        padding: 0.5rem !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -64,14 +66,12 @@ def toggle_number(game_idx, number):
             st.session_state.my_games[game_idx].add(number)
 
 def render_lotto_paper(game_idx):
-    st.caption(f"Game {chr(65+game_idx)}")
-    
+    # 번호판 생성
     numbers = list(range(1, 46))
     rows = [numbers[i:i+7] for i in range(0, len(numbers), 7)]
     
     for row_nums in rows:
-        # Streamlit 컬럼 7개 생성
-        cols = st.columns(7)
+        cols = st.columns(7) # 여기서 만들어진 컬럼들이 위 CSS의 영향을 받음
         for idx, number in enumerate(row_nums):
             is_selected = number in st.session_state.my_games[game_idx]
             btn_type = "primary" if is_selected else "secondary"
@@ -87,8 +87,8 @@ def render_lotto_paper(game_idx):
 
 # --- 5. 메인 화면 ---
 st.title("🎱 로또 패턴")
-st.write("좁은 화면에서도 가로로 나옵니다.")
 
+# 탭 구성 (이 안의 내용물만 CSS Grid가 적용됨)
 tabs = st.tabs(["A", "B", "C", "D", "E"])
 
 for i, tab in enumerate(tabs):
@@ -97,8 +97,9 @@ for i, tab in enumerate(tabs):
 
 st.divider()
 
-# --- 6. 하단 버튼 (여기도 가로로 나옵니다) ---
+# --- 6. 하단 버튼 (탭 밖이므로 정상적인 컬럼 작동) ---
 c1, c2 = st.columns([3, 1])
+
 with c1:
     if st.button("🚫 제외하고 생성", type="primary", use_container_width=True):
         all_used = set()
@@ -112,9 +113,10 @@ with c1:
         else:
             st.success(f"{len(remain)}개 남음")
             for k in range(5):
-                st.code(str(sorted(random.sample(remain, 6))))
+                nums = sorted(random.sample(remain, 6))
+                st.code(f"{nums}", language="json")
 
 with c2:
-    if st.button("🔄", use_container_width=True): # 버튼 이름 줄임
+    if st.button("🔄", use_container_width=True): 
         st.session_state.my_games = {i: set() for i in range(5)}
         st.rerun()
