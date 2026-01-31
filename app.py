@@ -1,47 +1,43 @@
 import streamlit as st
 import random
 
-# --- 1. 페이지 설정 및 스타일 (폴드4 커버화면 완벽 대응) ---
+# --- 1. 페이지 설정 및 스타일 (폴드4 커버화면 해결 버전) ---
 st.set_page_config(page_title="로또 패턴 반전기", page_icon="🎱", layout="centered")
 
 st.markdown("""
 <style>
-    /* [핵심] 7개짜리 컬럼이 있는 줄만 감지해서 '강제 그리드' 적용 */
-    /* :has() 선택자는 최신 브라우저(크롬, 삼성인터넷 등)에서 작동합니다 */
+    /* [핵심 1] 7개짜리 컬럼이 있는 블록만 타겟팅 */
     div[data-testid="stHorizontalBlock"]:has(div[data-testid="column"]:nth-child(7)) {
-        display: grid !important;
-        grid-template-columns: repeat(7, 1fr) !important; /* 무조건 7등분 */
-        gap: 2px !important;        /* 간격 최소화 */
-        flex-direction: row !important; /* 세로 정렬 방지 */
-        flex-wrap: nowrap !important;   /* 줄바꿈 방지 */
+        display: flex !important;
+        flex-direction: row !important;  /* 무조건 가로 */
+        flex-wrap: nowrap !important;    /* 줄바꿈 금지 */
+        gap: 1px !important;             /* 간격 극소화 */
     }
 
-    /* 7개짜리 그리드 안의 컬럼 스타일 초기화 */
+    /* [핵심 2] 컬럼의 최소 너비 강제 해제 */
     div[data-testid="stHorizontalBlock"]:has(div[data-testid="column"]:nth-child(7)) div[data-testid="column"] {
+        flex: 1 1 0px !important;        /* 강제 축소 허용 */
+        min-width: 0px !important;       /* 이게 없으면 좁은 화면에서 터집니다 */
         width: auto !important;
-        flex: 1 1 0 !important;
-        min-width: 0 !important;    /* 내용물이 커도 강제로 줄임 (중요) */
-        padding: 0 !important;
+        padding: 0px !important;
     }
 
-    /* 버튼 스타일: 좁은 화면에 맞춰 꽉 채우기 */
+    /* [핵심 3] 버튼 스타일 */
     div[data-testid="stHorizontalBlock"]:has(div[data-testid="column"]:nth-child(7)) button {
         width: 100% !important;
-        aspect-ratio: 1 / 1 !important; /* 정사각 비율 유지 -> 동그라미 */
-        padding: 0 !important;          /* 내부 여백 제거 */
-        margin: 0 !important;
+        aspect-ratio: 1 / 1 !important;
+        padding: 0px !important;
+        margin: 0px !important;
         border-radius: 50% !important;
-        
-        /* 글자 크기: 화면 폭에 따라 자동 조절 (작은 화면에선 글자도 작게) */
-        font-size: clamp(8px, 3.5vw, 16px) !important; 
+        font-size: clamp(8px, 3.5vw, 16px) !important; /* 글자 크기 자동 조절 */
         font-weight: bold;
-        line-height: 1 !important;      /* 수직 정렬 보정 */
+        line-height: 1 !important;
         border: 1px solid #e0e0e0;
     }
     
-    /* 탭 메뉴 여백 줄이기 */
-    .stTabs [data-baseweb="tab-list"] { gap: 4px; }
-    .stTabs [data-baseweb="tab"] { padding: 5px 10px; font-size: 0.9rem; }
+    /* 탭 스타일 조정 */
+    .stTabs [data-baseweb="tab-list"] { gap: 2px; }
+    .stTabs [data-baseweb="tab"] { padding: 4px 8px; font-size: 0.85rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -67,7 +63,6 @@ def render_lotto_paper(game_idx):
     rows = [numbers[i:i+7] for i in range(0, len(numbers), 7)]
     
     for row_nums in rows:
-        # Streamlit 컬럼 생성
         cols = st.columns(7)
         for idx, number in enumerate(row_nums):
             is_selected = number in st.session_state.my_games[game_idx]
@@ -95,11 +90,11 @@ for i, tab in enumerate(tabs):
         if selected:
             st.info(f"선택: {selected}")
         else:
-            st.write("") # 공간 유지
+            st.write("") 
 
 st.divider()
 
-# --- 5. 하단 버튼 (이 부분은 그리드 적용 안 받음) ---
+# --- 5. 하단 버튼 ---
 col_action1, col_action2 = st.columns([3, 1])
 
 with col_action1:
