@@ -140,7 +140,7 @@ $('fsBtn').onclick = goFullscreen;
 function goFullscreen() {
   const el = document.documentElement;
   const req = el.requestFullscreen || el.webkitRequestFullscreen;
-  if (req) Promise.resolve(req.call(el)).then(() => screen.orientation?.lock?.('landscape').catch(() => { })).catch(() => { });
+  try { if (req) Promise.resolve(req.call(el)).then(() => screen.orientation?.lock?.('landscape').catch(() => { })).catch(() => { }); } catch { }
 }
 
 // ---------- Flight ----------
