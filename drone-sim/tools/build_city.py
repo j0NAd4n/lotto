@@ -107,13 +107,13 @@ def main(src, dst):
             kind = 1 if ("historic" in tags or tags.get("building") in ("temple", "shrine", "palace")
                          or (tags.get("roof:shape") in ("hipped", "gabled") and h < 12)) else 0
             out["b"].append([round(h * 10), round(mh * 10), kind] + flat(ring))
-        elif "highway" in tags:
+        elif tags.get("highway") in ROAD_W:
             out["roads"].append([ROAD_W.get(tags["highway"], 6)] + flat(simplify(pts, 1.0)))
-        elif "waterway" in tags:
+        elif tags.get("waterway") in ("river", "stream", "canal", "drain", "ditch"):
             out["rivers"].append([12 if tags["waterway"] in ("river", "stream", "canal") else 4] + flat(pts))
         elif closed and (tags.get("natural") == "water"):
             out["water"].append(flat(simplify(pts[:-1], 1.0)))
-        elif closed:
+        elif closed and (tags.get("leisure") == "park" or tags.get("landuse") in ("grass", "forest") or tags.get("natural") == "wood"):
             out["green"].append(flat(simplify(pts[:-1], 1.0)))
     json.dump(out, open(dst, "w"), separators=(",", ":"))
     print({k: len(v) for k, v in out.items() if isinstance(v, list)})
